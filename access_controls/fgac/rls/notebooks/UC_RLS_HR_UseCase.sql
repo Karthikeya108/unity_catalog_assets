@@ -27,8 +27,8 @@ USE SCHEMA default;
 -- COMMAND ----------
 
 -- MAGIC %python
--- MAGIC employees_df.write.mode("overwrite").saveAsTable("employees")
--- MAGIC managers_df.write.mode("overwrite").saveAsTable("managers")
+-- MAGIC employees_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable("employees")
+-- MAGIC managers_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable("managers")
 
 -- COMMAND ----------
 
@@ -40,6 +40,9 @@ USE SCHEMA default;
 -- COMMAND ----------
 
 -- MAGIC %python
+-- MAGIC """
+-- MAGIC In order to make it easier to implement the Row Filtering logic, I am adding another column `manager` (that stores the email address) to the `employees` table
+-- MAGIC """
 -- MAGIC from pyspark.sql.functions import col
 -- MAGIC
 -- MAGIC emp_df =  spark.read.table("employees")
@@ -60,25 +63,49 @@ USE SCHEMA default;
 -- COMMAND ----------
 
 --'manager' column in the employee table needs to be up to date
--- multiple skip levels upto 4 needs to be added
 SELECT * FROM employees;
 
 -- COMMAND ----------
 
-DROP FUNCTION IF EXISTS row_filter_direct_reports;
-
---If the row filter refers to one or more tables, you cannot apply the row filter to any of those tables.
-CREATE FUNCTION row_filter_direct_reports(manager STRING)
-RETURNS BOOLEAN
-  RETURN (manager = CURRENT_USER());
+-- MAGIC %md
+-- MAGIC ###Scenario 1: Show only Direct Reports
+-- MAGIC In the first scenario, I will create a row filter finction `row_filter_direct_reports` with `email` and `manager` as parameters. This function when applied to the `employees` table will return rows that match employee who is querying the data as well as the data of thier direct report.
 
 -- COMMAND ----------
 
-ALTER TABLE employees SET ROW FILTER row_filter_direct_reports ON (manager);
+--If the row filter refers to one or more tables, you cannot apply the row filter to any of those tables.
+CREATE OR REPLACE FUNCTION row_filter_direct_reports(email STRING, manager STRING)
+RETURN (email = CURRENT_USER())
+OR (manager = CURRENT_USER());
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC For testing purposes, try replace the `CURRENT_USER()` string in the above function with one of the email ids from the employees table (eg., `Danielle.Gibbs@company.com`)
+
+-- COMMAND ----------
+
+ALTER TABLE employees SET ROW FILTER row_filter_direct_reports ON (email, manager);
 
 -- COMMAND ----------
 
 SELECT * FROM employees ORDER BY manager;
+
+-- COMMAND ----------
+
+--Clean up: Drop the filter from the table
+ALTER TABLE employees DROP ROW FILTER;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC ###Scenario 2: Show reporting employees upto 3 levels below
+-- MAGIC In the second scenario, I will create a row filter finction `row_filter_reports` with `email` as a parameter. This function when applied to the `employees` table will return rows that match employee who is querying the data as well as the data of the reporting employees upto 3 levels below.
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC I am creating a table `reporting_levels` to capture the manager<>employee hierarchial structure. I will use this table to create yet another table `employee_manager_mulitple_levels` to simply the implementation of the row filter function.
 
 -- COMMAND ----------
 
@@ -124,6 +151,11 @@ CREATE OR REPLACE FUNCTION row_filter_reports(email STRING)
 
 -- COMMAND ----------
 
+-- MAGIC %md
+-- MAGIC For testing purposes, try replace the `CURRENT_USER()` string in the above function with one of the email ids from the employees table (eg., `Jessica.Carey@company.com`)
+
+-- COMMAND ----------
+
 ALTER TABLE employees SET ROW FILTER row_filter_reports ON (email);
 
 -- COMMAND ----------
@@ -132,6 +164,18 @@ SELECT * FROM employees ORDER BY manager;
 
 -- COMMAND ----------
 
--- MAGIC %environment
--- MAGIC "client": "1"
--- MAGIC "base_environment": ""
+-- MAGIC %md
+-- MAGIC If you replace the `CURRENT_USER()` function with `Jessica.Carey@company.com` for testing, then you will notice that it returns all the records except for `Marissa Campbell` who is 4 levels below `Jessica Carey` (as expected)
+
+-- COMMAND ----------
+
+--Clean up: Drop the filter from the table
+ALTER TABLE employees DROP ROW FILTER;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC #### Notes:
+-- MAGIC - I haven't done any performance testing for this code. So, I am not sure if this scales.
+-- MAGIC - The row filter function is placed under the catalog and schema and hence UC access controls are applicable of these functions as well.
+-- MAGIC

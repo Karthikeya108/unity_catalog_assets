@@ -91,9 +91,3 @@ employees_df.write.mode("overwrite").saveAsTable("main.default.employees")
 #export data to CSV files
 employees_df = employees_df.toPandas().replace(r'\n',  ' ', regex=True)
 employees_df.to_csv("/Volumes/main/default/data/employees.csv", sep=";", index=False)
-
-# COMMAND ----------
-
-# MAGIC %environment
-# MAGIC "client": "1"
-# MAGIC "base_environment": ""
