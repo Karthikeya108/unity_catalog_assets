@@ -1,0 +1,10 @@
+employee_id;employee_email;direct_report
+1723035680;Jessica.Carey@company.com;1723035681
+1723035680;Jessica.Carey@company.com;1723035679
+1723035680;Jessica.Carey@company.com;1723035686
+1723035681;Kayla.Johnson@company.com;1723035684
+1723035681;Kayla.Johnson@company.com;1723035677
+1723035679;Jessica.Robinson@company.com;1723035685
+1723035686;Martha.Weiss@company.com;1723035682
+1723035685;Lisa.Sanders@company.com;1723035683
+1723035683;Danielle.Gibbs@company.com;1723035678
