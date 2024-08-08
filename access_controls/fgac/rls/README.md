@@ -9,5 +9,5 @@ HR Data on Databricks Platform: Filter rows and display only the relevant record
 The employee dataset is generated using Python Faker library.
 
 #### How to run the notebook
-1. Clone the repo within a Databricks workspace
+1. Clone the repo within a Databricks workspace using Git folders (https://docs.databricks.com/en/repos/index.htmls)
 2. Execute the commands in the notebook with a UC Shared Cluster or Serverless Compute
